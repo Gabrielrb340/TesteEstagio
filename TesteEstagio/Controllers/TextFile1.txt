@@ -1,0 +1,164 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.Entity;
+using System.Data.Entity.Infrastructure;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Web.Http;
+using System.Web.Http.Description;
+using TesteEstagio.Models;
+
+namespace TesteEstagio.Controllers
+{
+    public class ClientesController : ApiController
+    {
+        private BDTesteEntities db = new BDTesteEntities();
+
+        // GET: api/Clientes
+        //sem nenhuma condição.
+        public IQueryable<Cliente> GetCliente()
+        {
+            return db.Cliente;
+        }
+
+        //caso queira ordenar
+        public IQueryable<Cliente> GetCliente(String OrdenarNome)
+        {
+            IQueryable<Cliente> clientes;
+            switch (OrdenarNome)
+            {
+                case "AZ":
+                    clientes = db.Cliente.OrderBy(n => n.Nome);
+                    break;
+                case "ZA":
+                    clientes = db.Cliente.OrderByDescending(n => n.Nome);
+                    break;
+                default:
+                    clientes = db.Cliente;
+                    break;
+            }
+
+            return clientes;
+        }
+
+        //caso queira procurar pelo nome
+        public List<Cliente> GetClientesnome(string BuscaNome)
+        {
+            var clientes = db.Cliente.Where(c => c.Nome.StartsWith(BuscaNome));
+            return clientes.ToList();
+        }
+
+        // GET: api/Clientes/5
+        [ResponseType(typeof(Cliente))]
+        public async Task<IHttpActionResult> GetCliente(int id)
+        {
+            Cliente cliente = await db.Cliente.FindAsync(id);
+            if (cliente == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(cliente);
+        }
+
+        // PUT: api/Clientes/5
+        [ResponseType(typeof(void))]
+        public async Task<IHttpActionResult> PutCliente(int id, Cliente cliente)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if (id != cliente.Id)
+            {
+                return BadRequest();
+            }
+
+            db.Entry(cliente).State = EntityState.Modified;
+
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!ClienteExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return StatusCode(HttpStatusCode.NoContent);
+        }
+
+        // POST: api/Clientes
+        [ResponseType(typeof(Cliente))]
+        public async Task<IHttpActionResult> PostCliente(Cliente cliente)
+        {
+            //  String email = cliente.Email;
+            // var VerificarEmail = db.Cliente.Where(p => p.Email.Equals(email));
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            db.Cliente.Add(cliente);
+
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                if (ClienteExists(cliente.Id))
+                {
+                    return Conflict();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return CreatedAtRoute("DefaultApi", new { id = cliente.Id }, cliente);
+        }
+
+        // DELETE: api/Clientes/5
+        [ResponseType(typeof(Cliente))]
+        public async Task<IHttpActionResult> DeleteCliente(int id)
+        {
+            Cliente cliente = await db.Cliente.FindAsync(id);
+            if (cliente == null)
+            {
+                return NotFound();
+            }
+
+            db.Cliente.Remove(cliente);
+            await db.SaveChangesAsync();
+
+            return Ok(cliente);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                db.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        private bool ClienteExists(int id)
+        {
+            return db.Cliente.Count(e => e.Id == id) > 0;
+        }
+    }
+}
